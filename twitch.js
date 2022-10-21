@@ -46,7 +46,31 @@ clientMqtt.on('connect', onPublish)
 clientTwitch.connect()
 
 // ↑ Don't touch ↑
-
+/*
+                              |
+                              |
+                              |
+                              |
+                              |
+                              |
+                              |
+                          _ ----- _
+                     .-~             ~-.
+                   /                     \
+        .-- -- -- |                       | -- -- --.
+    .-~ / ~~ ~~ ~~ \        O   O        / ~~ ~~ ~~ \ ~-.
+.-~   /        _ - ~ ~-.             .-~ ~ - _        \   ~-.
+    /      /~          /  ~ ----- ~  \          ~\      \
+  /       /           /               \           \       \
+         /           /                 \           \
+        /           /                   \           \
+       /           |                     |           \
+                   |                     |
+                   |                     |
+                   |                     |
+                   |                     |
+						 I am a friendly spider, here to eat bugs
+*/
 
 // RegExp
 const hexColour = new RegExp("^#[a-fA-F0-9]{6}$")
@@ -56,54 +80,38 @@ function onMessageHandler (target, context, msg, self)
 {
 	if (self) { return } // Ignore messages from the bot
 
-
 	// Exemple of an MQTT message that change the colour of 3 different LEDs by typing "!led[number] [colour]" in the chat
 	
 	const commandName = msg.trim().toLowerCase()
-	const topicName = mqtt_topic + commandName.substring(1, 5)
 	let commandBaseTab = commandName.split(" ")
-	let commandBase = commandName.split(" ")[0].substring(1)
  
-	
-	switch(commandBase)
+	switch(commandBaseTab[0].substring(1))
 	{
 	case "led12":
+	case "led21":
+	case "led13":
+	case "led31":
+	case "led23":
+	case "led32":
 		if (commandBaseTab.length == 3)
 		{
 			let colour1 = selectColour(commandBaseTab[1])
 			let colour2 = selectColour(commandBaseTab[2])
 			if(colour1 && colour2)
 			{
-				onPublish(mqtt_topic + "led1",colour1)
-				onPublish(mqtt_topic + "led2",colour2)
+				let led1 = commandBaseTab[0].substring(4, 5)
+				let led2 = commandBaseTab[0].substring(5, 6)
+				onPublish(mqtt_topic + "led"+led1,colour1);
+				onPublish(mqtt_topic + "led"+led2,colour2);
 			}
 		}
-		break
-	case "led13":
-		if (commandBaseTab.length == 3)
-		{
-			let colour1 = selectColour(commandBaseTab[1])
-			let colour3 = selectColour(commandBaseTab[2])
-			if(colour1 && colour3)
-			{
-				onPublish(mqtt_topic + "led1",colour1)
-				onPublish(mqtt_topic + "led3",colour3)
-			}
-		}
-		break
-	case "led23":
-		if (commandBaseTab.length == 3)
-		{
-			let colour2 = selectColour(commandBaseTab[1])
-			let colour3 = selectColour(commandBaseTab[2])
-			if(colour2 && colour3)
-			{
-				onPublish(mqtt_topic + "led2",colour2)
-				onPublish(mqtt_topic + "led3",colour3)
-			}
-		}
-		break
+		break;
 	case "led123":
+	case "led213":
+	case "led231":
+	case "led132":
+	case "led312":
+	case "led321":
 		if (commandBaseTab.length == 4)
 		{
 			let colour1 = selectColour(commandBaseTab[1])
@@ -111,9 +119,12 @@ function onMessageHandler (target, context, msg, self)
 			let colour3 = selectColour(commandBaseTab[3])
 			if(colour1 && colour2 && colour3)
 			{
-				onPublish(mqtt_topic + "led1",colour1)
-				onPublish(mqtt_topic + "led2",colour2)
-				onPublish(mqtt_topic + "led3",colour3)
+				let led1 = commandBaseTab[0].substring(4, 5)
+				let led2 = commandBaseTab[0].substring(5, 6)
+				let led3 = commandBaseTab[0].substring(7, 8)
+				onPublish(mqtt_topic + "led"+led1,colour1);
+				onPublish(mqtt_topic + "led"+led2,colour2);
+				onPublish(mqtt_topic + "led"+led3,colour3);
 			}
 		}
 		break
@@ -121,6 +132,7 @@ function onMessageHandler (target, context, msg, self)
 	case "led2":
 	case "led3":
 		const colour = selectColour(commandName.substring(6))
+		const topicName = mqtt_topic + commandName.substring(1, 5)
 		if(colour)
 		{
 			onPublish(topicName,colour)
@@ -159,9 +171,36 @@ function onMessageHandler (target, context, msg, self)
 		case "rance":
 		case "fra":
 		case "fr":
+		case "sonic":
 			onPublish(mqtt_topic + "led1",selectColour("bleu"))
 			onPublish(mqtt_topic + "led2",selectColour("blanc"))
 			onPublish(mqtt_topic + "led3",selectColour("rouge"))
+			break
+		case "tails":
+			onPublish(mqtt_topic + "led1",selectColour("orange"))
+			onPublish(mqtt_topic + "led2",selectColour("blanc"))
+			onPublish(mqtt_topic + "led3",selectColour("rouge"))
+			break
+		case "knuckles":
+			onPublish(mqtt_topic + "led1",selectColour("rouge"))
+			onPublish(mqtt_topic + "led2",selectColour("blanc"))
+			onPublish(mqtt_topic + "led3",selectColour("vert"))
+			break
+		case "STK":
+		case "teamhero":
+			onPublish(mqtt_topic + "led1",selectColour("bleu"))
+			onPublish(mqtt_topic + "led2",selectColour("orange"))
+			onPublish(mqtt_topic + "led3",selectColour("rouge"))
+			break
+		case "nights":
+			onPublish(mqtt_topic + "led1",selectColour("violet"))
+			onPublish(mqtt_topic + "led2",selectColour("magenta"))
+			onPublish(mqtt_topic + "led3",selectColour("blanc"))
+			break
+		case "reimu":
+			onPublish(mqtt_topic + "led1",selectColour("marron"))
+			onPublish(mqtt_topic + "led2",selectColour("rouge"))
+			onPublish(mqtt_topic + "led3",selectColour("blanc"))
 			break
       
 		default:
@@ -185,12 +224,14 @@ function onMessageHandler (target, context, msg, self)
 }
 
 // MQTT publish
-function onPublish (tpc, msg) {
+function onPublish (tpc, msg) 
+{
 	clientMqtt.publish(tpc, msg)
 }
 
 // Called every time the bot connects to Twitch chat
-function onConnectedHandler (addr, port) {
+function onConnectedHandler (addr, port) 
+{
 	console.log(`* Connected to ${addr}:${port}`)
 }
 	
@@ -225,6 +266,9 @@ function selectColour(colour)
 			return'#FF44FF'
 		case 'violet':
 			return'#8000FF'
+		case 'marron':
+		case 'brown':
+			return'#B97A57'
 		case 'blanc':
 		case 'white':
 			return'#FFFFFF'
