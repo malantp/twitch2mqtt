@@ -73,7 +73,10 @@ clientTwitch.connect()
 */
 
 // RegExp
-const hexColour = new RegExp("^#[a-fA-F0-9]{6}$")
+const hexColour = new RegExp("^#[a-fA-F0-9]{6}$"),
+ledCommand = new RegExp("^led(?=[1-3]{1,3})([1-3])(?!\\1)([1-3])?(?!\\1)(?!\\2)([1-3])?$"),
+ledCommandPatch = new RegExp("^led[1-3]$");
+let commandName;
 
 // Called every time a message comes in
 function onMessageHandler (target, context, msg, self) 
@@ -82,147 +85,88 @@ function onMessageHandler (target, context, msg, self)
 
 	// Exemple of an MQTT message that change the colour of 3 different LEDs by typing "!led[number] [colour]" in the chat
 	
-	const commandName = msg.trim().toLowerCase()
+	commandName = msg.trim().toLowerCase()
 	let commandBaseTab = commandName.split(" ")
- 
-	switch(commandBaseTab[0].substring(1))
-	{
-	case "led12":
-	case "led21":
-	case "led13":
-	case "led31":
-	case "led23":
-	case "led32":
-		if (commandBaseTab.length == 3)
-		{
-			let colour1 = selectColour(commandBaseTab[1])
-			let colour2 = selectColour(commandBaseTab[2])
-			if(colour1 && colour2)
-			{
-				let led1 = commandBaseTab[0].substring(4, 5)
-				let led2 = commandBaseTab[0].substring(5, 6)
-				onPublish(mqtt_topic + "led"+led1,colour1);
-				onPublish(mqtt_topic + "led"+led2,colour2);
-			}
-		}
-		break;
-	case "led123":
-	case "led213":
-	case "led231":
-	case "led132":
-	case "led312":
-	case "led321":
-		if (commandBaseTab.length == 4)
-		{
-			let colour1 = selectColour(commandBaseTab[1])
-			let colour2 = selectColour(commandBaseTab[2])
-			let colour3 = selectColour(commandBaseTab[3])
-			if(colour1 && colour2 && colour3)
-			{
-				let led1 = commandBaseTab[0].substring(4, 5)
-				let led2 = commandBaseTab[0].substring(5, 6)
-				let led3 = commandBaseTab[0].substring(7, 8)
-				onPublish(mqtt_topic + "led"+led1,colour1);
-				onPublish(mqtt_topic + "led"+led2,colour2);
-				onPublish(mqtt_topic + "led"+led3,colour3);
-			}
-		}
-		break
-	case "led1":
-	case "led2":
-	case "led3":
-		const colour = selectColour(commandName.substring(6))
-		const topicName = mqtt_topic + commandName.substring(1, 5)
-		if(colour)
-		{
-			onPublish(topicName,colour)
-			console.log(`* Executed ${commandName} command`)
-		}
-		break
-	case "leds":
-		let preColour = commandName.substring(6)
-		switch (preColour.toLowerCase())
-		{
-		case "blouge":
-			if(Math.floor(Math.random()*2))
-			{
-				onPublish(mqtt_topic + "led1",selectColour("bleu"))
-				onPublish(mqtt_topic + "led3",selectColour("rouge"))
-			}
-			else
-			{
-				onPublish(mqtt_topic + "led1",selectColour("rouge"))
-				onPublish(mqtt_topic + "led3",selectColour("bleu"))
-			}
-			onPublish(mqtt_topic + "led2",selectColour("magenta"))
-			break
-		case "RGB":
-			onPublish(mqtt_topic + "led1",selectColour("rouge"))
-			onPublish(mqtt_topic + "led2",selectColour("vert"))
-			onPublish(mqtt_topic + "led3",selectColour("bleu"))
-			break
-		case "CMY":
-		case "primaires":
-			onPublish(mqtt_topic + "led1",selectColour("cyan"))
-			onPublish(mqtt_topic + "led2",selectColour("magenta"))
-			onPublish(mqtt_topic + "led3",selectColour("jaune"))
-			break
-		case "france":
-		case "rance":
-		case "fra":
-		case "fr":
-		case "sonic":
-			onPublish(mqtt_topic + "led1",selectColour("bleu"))
-			onPublish(mqtt_topic + "led2",selectColour("blanc"))
-			onPublish(mqtt_topic + "led3",selectColour("rouge"))
-			break
-		case "tails":
-			onPublish(mqtt_topic + "led1",selectColour("orange"))
-			onPublish(mqtt_topic + "led2",selectColour("blanc"))
-			onPublish(mqtt_topic + "led3",selectColour("rouge"))
-			break
-		case "knuckles":
-			onPublish(mqtt_topic + "led1",selectColour("rouge"))
-			onPublish(mqtt_topic + "led2",selectColour("blanc"))
-			onPublish(mqtt_topic + "led3",selectColour("vert"))
-			break
-		case "STK":
-		case "teamhero":
-			onPublish(mqtt_topic + "led1",selectColour("bleu"))
-			onPublish(mqtt_topic + "led2",selectColour("orange"))
-			onPublish(mqtt_topic + "led3",selectColour("rouge"))
-			break
-		case "nights":
-			onPublish(mqtt_topic + "led1",selectColour("violet"))
-			onPublish(mqtt_topic + "led2",selectColour("magenta"))
-			onPublish(mqtt_topic + "led3",selectColour("blanc"))
-			break
-		case "reimu":
-			onPublish(mqtt_topic + "led1",selectColour("marron"))
-			onPublish(mqtt_topic + "led2",selectColour("rouge"))
-			onPublish(mqtt_topic + "led3",selectColour("blanc"))
-			break
-      
-		default:
-			const colour = selectColour(commandName.substring(6))
-			if(colour)
-			{
-				onPublish(mqtt_topic + "led1",colour)
-				onPublish(mqtt_topic + "led2",colour)
-				onPublish(mqtt_topic + "led3",colour)
-			}
-		}//switch "2"
+	// TODO : Modifier la regex pour qu'elle accepte les commandes led1, led2 et led3 et retirer le patch
+	// Si la commande cible des leds en particulier
+    if( (ledCommand.test(commandBaseTab[0].substring(1)) || ledCommandPatch.test(commandBaseTab[0].substring(1))) && commandBaseTab.length >1)
+    {
+		// On récupère les numéros des leds
+        let cmd = {}, leds = commandBaseTab[0].substring(4), colorRequest
+		// Pour chaque leds
+        for(let l of leds)
+        {
+			// si la couleur correspondante existe, on l'ajoute à la liste de commande.
+			colorRequest = commandBaseTab[leds.indexOf(l)+1]? commandBaseTab[leds.indexOf(l)+1] : colorRequest
+            let c = selectColour(colorRequest)
+            if(!c)return;
+            cmd[l] = c;
+        }
+        multiPublish(cmd);
 		console.log(`* Executed ${commandName} command`)
-		break
-	case "ledsr":		
-			onPublish(mqtt_topic + "led1",randColour())
-			onPublish(mqtt_topic + "led2",randColour())
-			onPublish(mqtt_topic + "led3",randColour())
-			console.log(`* Executed ${commandName} command`)
-		break
-	}//switch
+        return;
+    }
+	switch(commandBaseTab[0].substring(1))
+    {
+    case "leds":
+        let preColour = commandName.substring(6)
+        switch (preColour.toLowerCase())
+        {
+        case "blouge":
+            let c1 = Math.floor(Math.random()*2) ? "bleu" : "rouge"
+            let c2 = c1 == "rouge"? "bleu" : "rouge"
+            multiPublish({1:c1, 2:"magenta", 3:c2})
+            break
+        case "RGB":
+            multiPublish({1:"rouge", 2:"vert", 3:"bleu"})
+            break
+        case "CMY":
+        case "primaires":
+            multiPublish({1:"cyan", 2:"magenta", 3:"jaune"})
+            break
+        case "france":
+        case "rance":
+        case "fra":
+        case "fr":
+            multiPublish({1:"bleu", 2:"blanc", 3:"rouge"})
+            break
+        case "sonic":
+                multiPublish({1:(Math.floor(Math.random()*7) ? "bleu" : "jaune"), 2:"blanc", 3:"rouge"})
+            break
+        case "tails":
+            multiPublish({1:"orange", 2:"blanc", 3:"rouge"})
+            break
+        case "knuckles":
+            multiPublish({1:"rouge", 2:"blanc", 3:"vert"})
+            break
+        case "STK":
+        case "teamhero":
+            multiPublish({1:"bleu", 2:"orange", 3:"rouge"})
+            break
+        case "nights":
+            multiPublish({1:"violet", 2:"magenta", 3:"blanc"})
+            break
+        default:
+            const colour = selectColour(commandName.substring(6))
+            if(colour)
+            {
+                multiPublish({1:colour, 2:colour, 3:colour})
+            }
+        }//switch "2"
+        break
+    case "ledsr":        
+            multiPublish({1:randColour(), 2:randColour(), 3:randColour()})
+        break
+    }//switch
 }
-
+function multiPublish(commands)
+{
+    for(let i in commands)
+    {
+        onPublish(mqtt_topic + `led${i}`,selectColour(commands[i]))
+    }
+    console.log(`* Executed ${commandName} command`)
+}
 // MQTT publish
 function onPublish (tpc, msg) 
 {
@@ -272,9 +216,14 @@ function selectColour(colour)
 		case 'blanc':
 		case 'white':
 			return'#FFFFFF'
-		case 'noir':
-		case 'black':
-		case 'off':
+    case 'infrarouge':
+    case 'infra-rouge':
+    case 'infrared':
+    case 'infra-red':
+    case 'ultraviolet':
+    case 'noir':
+    case 'black':
+    case 'off':
 			return'#000000'
 		case "random":
 		case "rand":
